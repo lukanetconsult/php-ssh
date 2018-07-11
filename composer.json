@@ -1,5 +1,5 @@
 {
-    "name":         "herzult/php-ssh",
+    "name":         "luka/php-ssh",
     "type":         "library",
     "description":  "Provides an object-oriented wrapper for the php ssh2 extension.",
     "keywords":     ["ssh", "ssh2"],
