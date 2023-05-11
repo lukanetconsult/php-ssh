@@ -125,7 +125,7 @@ class Session extends AbstractResourceProvider
      */
     private function authenticate(): void
     {
-        if ($this->authentication && !$this->authentication->authenticate($this)) {
+        if ($this->authentication?->authenticate($this) === false) {
             throw AuthenticationException::authenticationFailed($this);
         }
     }

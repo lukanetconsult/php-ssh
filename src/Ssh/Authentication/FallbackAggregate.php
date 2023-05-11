@@ -1,59 +1,49 @@
-<?php declare(strict_types=1);
-/**
- * @author    Axel Helmert <ah@luka.de>
- * @license   MIT
- * @copyright Copyright (c) 2023 LUKA netconsult GmbH (www.luka.de)
- */
+<?php
+
+declare(strict_types=1);
 
 namespace Ssh\Authentication;
 
 use Ssh\Authentication;
+
 use Ssh\Session;
 
+use function array_filter;
+use function array_shift;
 use function array_values;
 
 final readonly class FallbackAggregate implements Authentication
 {
-    /**
-     * @var non-empty-list<Authentication>
-     */
-    private array $options;
+    private Authentication|null $decorated;
 
-    public function __construct(Authentication $primary, Authentication ...$fallbacks)
+    public function __construct(Authentication ...$options)
     {
-        $this->options = [
-            $primary,
-            ...array_values($fallbacks),
-        ];
+        $primary = array_shift($options);
+        $this->decorated = $primary
+            ? Fallback::aggregate($primary, ...$options)
+            : $primary;
     }
 
-    public static function aggregate(Authentication $authentication, Authentication|null $aggregateTo = null): self
+    public static function all(Authentication|null ...$options): self
     {
-        if ($aggregateTo === null || $aggregateTo instanceof None) {
-            return new self($authentication);
-        }
-
-        $aggregateTo = $aggregateTo instanceof self ? $aggregateTo : new self($aggregateTo);
-
-        return $aggregateTo->with($authentication);
+        return new self(...array_filter($options));
     }
 
-    public function with(Authentication $fallback): self
+    public function withFallback(Authentication $fallback): self
     {
-        return new self(...$this->options, $fallback);
+        return $this->decorated
+            ? new self($this->decorated, $fallback)
+            : new self($fallback);
     }
 
-    /**
-     * @inheritDoc
-     */
-    function authenticate(Session $session): bool
+    public function asFallbackFor(Authentication $primary): self
     {
-        foreach ($this->options as $option) {
-            if ($option->authenticate($session)) {
-                return true;
-            }
-        }
+        $fallbacks = $this->decorated ? [$this->decorated] : [];
+        return new self($primary, ...$fallbacks);
+    }
 
-        return false;
+    public function authenticate(Session $session): bool
+    {
+        return $this->decorated?->authenticate($session) ?? false;
     }
 }

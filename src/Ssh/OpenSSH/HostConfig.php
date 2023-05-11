@@ -11,8 +11,6 @@ use Ssh\Configuration;
 use Ssh\ProvidesAuthentication;
 use UnexpectedValueException;
 
-use function file_exists;
-
 final class HostConfig implements Configuration, ProvidesAuthentication
 {
     use ConfigDecoratorTrait;
@@ -46,23 +44,22 @@ final class HostConfig implements Configuration, ProvidesAuthentication
             throw new UnexpectedValueException("Can not authenticate for '{$this->getHost()}' could not find user to authenticate as");
         }
 
-        $authentication = null;
+        $authentication = new Authentication\FallbackAggregate();
 
         if ($this->keys->count()) {
-            $authentication = new Authentication\PublicKeyFile(
+            $authentication = $authentication->withFallback(new Authentication\PublicKeyFile(
                 $user,
                 $this->keys,
                 $passphrase
-            );
+            ));
         }
 
         if ($passphrase !== null && $passphrase !== '') {
-            $authentication = Authentication\FallbackAggregate::aggregate(
+            $authentication = $authentication->withFallback(
                 new Authentication\Password($user, $passphrase),
-                $authentication,
             );
         }
 
-        return $authentication ?? new Authentication\None($user);
+        return $authentication;
     }
 }
