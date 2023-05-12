@@ -4,31 +4,32 @@ declare(strict_types=1);
 
 namespace Ssh\OpenSSH;
 
+use Ssh\Environment;
 use UnexpectedValueException;
 
-use function getenv;
-use function is_string;
-use function preg_replace_callback;
+use function str_starts_with;
+use function substr;
 
 trait PathExpansion
 {
+    private Environment|null $environment = null;
+
     /**
      * Replaces '~/' with users home path
      */
     private function expandPath(string $path): string
     {
-        return preg_replace_callback(
-            '#^~/#',
-            function (): string {
-                $home= getenv('HOME');
+        if (!str_starts_with($path, '~/')) {
+            return $path;
+        }
 
-                if (!is_string($home) || $home === '') {
-                    throw new UnexpectedValueException('Could not read HOME directory from environment');
-                }
+        $env = $this->environment ?? Environment::system();
+        $home = $env->env['HOME'] ?? '';
 
-                return $home . '/';
-            },
-            $path
-        );
+        if ($home === '') {
+            throw new UnexpectedValueException('Could not read HOME directory from environment');
+        }
+
+        return $home . substr($path, 1);
     }
 }

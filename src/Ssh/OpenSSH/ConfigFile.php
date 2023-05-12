@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace Ssh\OpenSSH;
 
 use Ssh\Authentication;
-use Ssh\Authentication\KeyPair;
 use Ssh\Configuration;
+use Ssh\Environment;
 use Ssh\HostConfiguration;
 use Ssh\ProvidesAuthentication;
 
@@ -15,8 +15,7 @@ final class ConfigFile implements Configuration, ProvidesAuthentication
     use ConfigDecoratorTrait;
     use PathExpansion;
 
-    public const DEFAULT_SSH_CONFIG = '~/.ssh/config';
-    public const DEFAULT_KEY_FILE = '~/.ssh/id_rsa';
+    public const DEFAULT_SSH_CONFIG = 'config';
 
     private HostConfig $hostConfig;
 
@@ -25,25 +24,31 @@ final class ConfigFile implements Configuration, ProvidesAuthentication
      */
     private array $data;
 
-    public function __construct(Configuration $hostConfig, string $file = self::DEFAULT_SSH_CONFIG)
+    public function __construct(Configuration $hostConfig, string|null $file = null, Environment $environment = null)
     {
-        $this->data = (new Parser())->parse($this->expandPath($file));
+        $this->environment = $environment ?? Environment::system();
+        $file = $file ?? $this->environment->env['SSH_CONFIG'] ?? self::DEFAULT_SSH_CONFIG;
+        $this->data = (new Parser())->parse($this->environment->resolveSshFile($file));
         $this->hostConfig = $this->findConfig($hostConfig);
         $this->decoratedConfig = $this->hostConfig;
     }
 
-    public static function forHostname(string $hostname, string $file = self::DEFAULT_SSH_CONFIG): self
+    public static function forHostname(string $hostname, string|null $file = null): self
     {
         return new self(new HostConfiguration($hostname), $file);
     }
 
-    private function prepareIdFile(string $path): KeyPair|null
+    private function prepareIdFile(string|null $path): Authentication\KeyPairOptions
     {
         if ($path === '') {
-            return null;
+            $path = null;
         }
 
-        return new KeyPair($this->expandPath($path));
+        return Authentication\KeyPairOptions::fromFilename(
+            $path !== null
+                ? $this->expandPath($path)
+                : null
+        );
     }
 
     private function findConfig(Configuration $config): HostConfig
@@ -60,7 +65,7 @@ final class ConfigFile implements Configuration, ProvidesAuthentication
                 $config->getCallbacks()
             ),
             $result['user'] ?? null,
-            $this->prepareIdFile($result['identityfile'] ?? self::DEFAULT_KEY_FILE)
+            $this->prepareIdFile($result['identityfile'])
         );
     }
 

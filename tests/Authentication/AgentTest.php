@@ -17,7 +17,7 @@ class AgentTest extends TestCase
         self::assertInstanceOf(Authentication::class, $agent);
     }
 
-    public function testShouldReflectTheUser()
+    public function testShouldReflectTheUser(): void
     {
         $agent = new Agent('user');
         $this->assertSame('user', $agent->username);

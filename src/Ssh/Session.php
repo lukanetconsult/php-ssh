@@ -6,6 +6,7 @@ namespace Ssh;
 
 use LogicException;
 use RuntimeException;
+use Ssh\Authentication\FallbackAggregate;
 use Ssh\Exception\AuthenticationException;
 
 use function is_resource;
@@ -124,7 +125,7 @@ class Session extends AbstractResourceProvider
      */
     private function authenticate(): void
     {
-        if ($this->authentication && !$this->authentication->authenticate($this)) {
+        if ($this->authentication?->authenticate($this) === false) {
             throw AuthenticationException::authenticationFailed($this);
         }
     }

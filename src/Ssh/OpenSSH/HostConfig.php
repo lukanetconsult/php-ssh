@@ -6,32 +6,29 @@ namespace Ssh\OpenSSH;
 
 use Ssh\Authentication;
 use Ssh\Authentication\KeyPair;
+use Ssh\Authentication\KeyPairOptions;
 use Ssh\Configuration;
 use Ssh\ProvidesAuthentication;
 use UnexpectedValueException;
-
-use function file_exists;
 
 final class HostConfig implements Configuration, ProvidesAuthentication
 {
     use ConfigDecoratorTrait;
 
+    private KeyPairOptions $keys;
+
     public function __construct(
         Configuration $hostConfig,
         private string|null $user = null,
-        private KeyPair|null $keys = null,
+        KeyPairOptions|KeyPair|null $keys = null,
     ) {
         $this->decoratedConfig = $hostConfig;
+        $this->keys = $keys instanceof KeyPairOptions ? $keys : KeyPairOptions::fromKeyPair($keys);
     }
 
     public function getUser(): string|null
     {
         return $this->user;
-    }
-
-    public function getKeyPair(): KeyPair|null
-    {
-        return $this->keys;
     }
 
     public function createAuthentication(string|null $passphrase = null, string|null $user = null): Authentication
@@ -42,16 +39,20 @@ final class HostConfig implements Configuration, ProvidesAuthentication
             throw new UnexpectedValueException("Can not authenticate for '{$this->getHost()}' could not find user to authenticate as");
         }
 
-        if ($this->keys && $this->keys->exists()) {
-            return new Authentication\PublicKeyFile(
+        $authentication = new Authentication\FallbackAggregate(
+            new Authentication\PublicKeyFile(
                 $user,
                 $this->keys,
                 $passphrase
+            )
+        );
+
+        if ($passphrase !== null && $passphrase !== '') {
+            $authentication = $authentication->withFallback(
+                new Authentication\Password($user, $passphrase),
             );
-        } else if ($passphrase !== null && $passphrase !== '') {
-            return new Authentication\Password($user, $passphrase);
-        } else {
-            return new Authentication\None($user);
         }
+
+        return $authentication;
     }
 }
