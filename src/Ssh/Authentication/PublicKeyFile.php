@@ -24,19 +24,13 @@ final readonly class PublicKeyFile implements Authentication
      */
     public function authenticate(Session $session): bool
     {
-        $args = [];
-
-        if ($this->passPhrase !== null) {
-            $args[] = $this->passPhrase;
-        }
-
         foreach ($this->keyPairs as $keyPair) {
             $result = ssh2_auth_pubkey_file(
                 $session->getResource()->resource,
                 $this->username,
                 $keyPair->publicKeyFile,
                 $keyPair->privateKeyFile,
-                ...$args,
+                $this->passPhrase ?? '',
             );
 
             if ($result) {
