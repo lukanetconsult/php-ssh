@@ -31,11 +31,6 @@ final class HostConfig implements Configuration, ProvidesAuthentication
         return $this->user;
     }
 
-    public function getKeyPair(): KeyPair|KeyPairOptions
-    {
-        return $this->keys;
-    }
-
     public function createAuthentication(string|null $passphrase = null, string|null $user = null): Authentication
     {
         $user = $user ?? $this->user;
@@ -44,15 +39,13 @@ final class HostConfig implements Configuration, ProvidesAuthentication
             throw new UnexpectedValueException("Can not authenticate for '{$this->getHost()}' could not find user to authenticate as");
         }
 
-        $authentication = new Authentication\FallbackAggregate();
-
-        if ($this->keys->count()) {
-            $authentication = $authentication->withFallback(new Authentication\PublicKeyFile(
+        $authentication = new Authentication\FallbackAggregate(
+            new Authentication\PublicKeyFile(
                 $user,
                 $this->keys,
                 $passphrase
-            ));
-        }
+            )
+        );
 
         if ($passphrase !== null && $passphrase !== '') {
             $authentication = $authentication->withFallback(
