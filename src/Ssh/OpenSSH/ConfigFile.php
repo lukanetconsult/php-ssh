@@ -24,7 +24,7 @@ final class ConfigFile implements Configuration, ProvidesAuthentication
      */
     private array $data;
 
-    public function __construct(Configuration $hostConfig, string $file = null, Environment $environment = null)
+    public function __construct(Configuration $hostConfig, string|null $file = null, Environment $environment = null)
     {
         $this->environment = $environment ?? Environment::system();
         $file = $file ?? $this->environment->env['SSH_CONFIG'] ?? self::DEFAULT_SSH_CONFIG;
@@ -33,7 +33,7 @@ final class ConfigFile implements Configuration, ProvidesAuthentication
         $this->decoratedConfig = $this->hostConfig;
     }
 
-    public static function forHostname(string $hostname, string $file = self::DEFAULT_SSH_CONFIG): self
+    public static function forHostname(string $hostname, string|null $file = null): self
     {
         return new self(new HostConfiguration($hostname), $file);
     }
