@@ -6,7 +6,9 @@ namespace Ssh;
 
 use function getenv;
 use function in_array;
+use function str_starts_with;
 use function strtolower;
+use function substr;
 
 final class Environment
 {
@@ -31,6 +33,27 @@ final class Environment
     public static function get(string $key): string|null
     {
         return self::system()->env[$key] ?? null;
+    }
+
+    /**
+     * Resolve SSH related file path
+     *
+     * When the given path is relative, it will be resolved relative to
+     * the user's local .ssh directory.
+     */
+    public function resolveSshFile(string $filename): string
+    {
+        if (str_starts_with($filename, '/')) {
+            return $filename;
+        }
+
+        $home = $this->env['HOME'] ?? '';
+
+        if (str_starts_with($filename, '~/')) {
+            return $home . substr($filename, 1);
+        }
+
+        return $home . '/.ssh/' . $filename;
     }
 
     public function flag(string $key, bool $default = false): bool

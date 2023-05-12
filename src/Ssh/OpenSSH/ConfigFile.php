@@ -6,6 +6,7 @@ namespace Ssh\OpenSSH;
 
 use Ssh\Authentication;
 use Ssh\Configuration;
+use Ssh\Environment;
 use Ssh\HostConfiguration;
 use Ssh\ProvidesAuthentication;
 
@@ -14,8 +15,7 @@ final class ConfigFile implements Configuration, ProvidesAuthentication
     use ConfigDecoratorTrait;
     use PathExpansion;
 
-    public const DEFAULT_SSH_CONFIG = '~/.ssh/config';
-    public const DEFAULT_KEY_FILE = '~/.ssh/id_rsa';
+    public const DEFAULT_SSH_CONFIG = 'config';
 
     private HostConfig $hostConfig;
 
@@ -24,9 +24,11 @@ final class ConfigFile implements Configuration, ProvidesAuthentication
      */
     private array $data;
 
-    public function __construct(Configuration $hostConfig, string $file = self::DEFAULT_SSH_CONFIG)
+    public function __construct(Configuration $hostConfig, string $file = null, Environment $environment = null)
     {
-        $this->data = (new Parser())->parse($this->expandPath($file));
+        $this->environment = $environment ?? Environment::system();
+        $file = $file ?? $this->environment->env['SSH_CONFIG'] ?? self::DEFAULT_SSH_CONFIG;
+        $this->data = (new Parser())->parse($this->environment->resolveSshFile($file));
         $this->hostConfig = $this->findConfig($hostConfig);
         $this->decoratedConfig = $this->hostConfig;
     }
