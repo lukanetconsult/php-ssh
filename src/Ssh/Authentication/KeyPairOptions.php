@@ -10,13 +10,18 @@ namespace Ssh\Authentication;
 use ArrayIterator;
 use CallbackFilterIterator;
 use Countable;
+use DirectoryIterator;
+use FilesystemIterator;
 use IteratorAggregate;
+use SplFileInfo;
 use Traversable;
 
 use function array_values;
 use function getenv;
 use function is_string;
 use function iterator_count;
+use function str_ends_with;
+use function str_starts_with;
 
 /**
  * @implements IteratorAggregate<KeyPair>
@@ -53,6 +58,26 @@ final readonly class KeyPairOptions implements IteratorAggregate, Countable
             new KeyPair($path . '/id_ecdsa'),
             new KeyPair($path . '/id_dsa'),
         );
+    }
+
+    /**
+     * Scans the given directory for private/public key pairs
+     */
+    public static function fromDirectory(string $directory): self
+    {
+        $iterator = new FilesystemIterator($directory, FilesystemIterator::SKIP_DOTS | FilesystemIterator::CURRENT_AS_FILEINFO);
+        $options = [];
+
+        foreach ($iterator as $entry) {
+            assert($entry instanceof SplFileInfo);
+            $filename = $entry->getFilename();
+
+            if ($entry->isFile() && !$entry->isDir() && str_starts_with($filename, 'id_') && !str_ends_with($filename, '.pub')) {
+                $options[] = new KeyPair($entry->getPathname());
+            }
+        }
+
+        return new self(...$options);
     }
 
     /**
