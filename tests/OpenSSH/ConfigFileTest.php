@@ -16,7 +16,7 @@ class ConfigFileTest extends TestCase
 {
     const VALID_FILE_FIXTURE = __DIR__ . '/../Fixtures/config_valid';
 
-    public function testClassConstructsWithValidConfig()
+    public function testClassConstructsWithValidConfig(): void
     {
         $instance = new ConfigFile(new HostConfiguration('my-host'), self::VALID_FILE_FIXTURE);
         self::assertInstanceOf(Configuration::class, $instance);
